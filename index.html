@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLUNDERER · Signal Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0000;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        /* ===== ANIMATED BACKGROUND ===== */
+        .bg-container {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            background: #0a0000;
+        }
+
+        .bg-image {
+            position: absolute;
+            width: 140%;
+            height: 140%;
+            top: -20%;
+            left: -20%;
+            object-fit: cover;
+            opacity: 0.55;
+            filter: blur(0.5px) brightness(0.7) saturate(1.4);
+            animation: bgDrift 35s infinite alternate ease-in-out;
+        }
+
+        @keyframes bgDrift {
+            0% { transform: translate(0%, 0%) scale(1) rotate(0deg); }
+            20% { transform: translate(-10%, -6%) scale(1.1) rotate(2deg); }
+            40% { transform: translate(6%, 10%) scale(0.92) rotate(-2deg); }
+            60% { transform: translate(-6%, -10%) scale(1.08) rotate(1.5deg); }
+            80% { transform: translate(10%, 6%) scale(0.95) rotate(-1.5deg); }
+            100% { transform: translate(0%, 0%) scale(1.03) rotate(0.5deg); }
+        }
+
+        .red-overlay {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 40%, rgba(180, 0, 0, 0.15), rgba(0, 0, 0, 0.4) 70%);
+            mix-blend-mode: multiply;
+            animation: pulseOverlay 10s infinite alternate ease-in-out;
+        }
+
+        @keyframes pulseOverlay {
+            0% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+            100% { opacity: 0.3; }
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.2;
+            animation: orbMove 22s infinite alternate ease-in-out;
+        }
+
+        .orb:nth-child(1) {
+            width: 600px;
+            height: 600px;
+            background: #ff0040;
+            top: -10%;
+            left: -10%;
+            animation-duration: 22s;
+        }
+        .orb:nth-child(2) {
+            width: 500px;
+            height: 500px;
+            background: #ff2200;
+            bottom: -15%;
+            right: -10%;
+            animation-duration: 26s;
+            animation-delay: -4s;
+        }
+        .orb:nth-child(3) {
+            width: 450px;
+            height: 450px;
+            background: #cc00ff;
+            top: 50%;
+            left: 60%;
+            animation-duration: 20s;
+            animation-delay: -8s;
+            opacity: 0.1;
+        }
+        .orb:nth-child(4) {
+            width: 400px;
+            height: 400px;
+            background: #ff0066;
+            top: 20%;
+            right: 20%;
+            animation-duration: 24s;
+            animation-delay: -12s;
+            opacity: 0.15;
+        }
+
+        @keyframes orbMove {
+            0% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(150px, -100px) scale(1.2); }
+            50% { transform: translate(-80px, 150px) scale(0.8); }
+            75% { transform: translate(100px, 80px) scale(1.15); }
+            100% { transform: translate(-130px, -130px) scale(0.85); }
+        }
+
+        .moving-line {
+            position: absolute;
+            background: rgba(255, 30, 30, 0.06);
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.03);
+            pointer-events: none;
+        }
+
+        .moving-line.h {
+            height: 1px;
+            width: 200%;
+            left: -50%;
+            animation: slideH 12s linear infinite;
+        }
+        .moving-line.v {
+            width: 1px;
+            height: 200%;
+            top: -50%;
+            animation: slideV 14s linear infinite;
+        }
+        .moving-line.diag {
+            width: 200%;
+            height: 1px;
+            left: -50%;
+            transform-origin: center;
+            animation: slideDiag 18s linear infinite;
+        }
+
+        @keyframes slideH {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(50%); }
+        }
+        @keyframes slideV {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(50%); }
+        }
+        @keyframes slideDiag {
+            0% { transform: translateX(0) rotate(0deg); }
+            100% { transform: translateX(50%) rotate(5deg); }
+        }
+
+        .moving-line.h:nth-child(5) { top: 10%; animation-duration: 14s; animation-delay: -2s; }
+        .moving-line.h:nth-child(6) { top: 25%; animation-duration: 18s; animation-delay: -6s; }
+        .moving-line.h:nth-child(7) { top: 40%; animation-duration: 16s; animation-delay: -1s; }
+        .moving-line.h:nth-child(8) { top: 55%; animation-duration: 20s; animation-delay: -9s; }
+        .moving-line.h:nth-child(9) { top: 70%; animation-duration: 22s; animation-delay: -4s; }
+        .moving-line.h:nth-child(10) { top: 85%; animation-duration: 15s; animation-delay: -7s; }
+
+        .moving-line.v:nth-child(11) { left: 8%; animation-duration: 16s; animation-delay: -3s; }
+        .moving-line.v:nth-child(12) { left: 22%; animation-duration: 20s; animation-delay: -8s; }
+        .moving-line.v:nth-child(13) { left: 36%; animation-duration: 18s; animation-delay: -2s; }
+        .moving-line.v:nth-child(14) { left: 50%; animation-duration: 22s; animation-delay: -6s; }
+        .moving-line.v:nth-child(15) { left: 64%; animation-duration: 17s; animation-delay: -1s; }
+        .moving-line.v:nth-child(16) { left: 78%; animation-duration: 19s; animation-delay: -5s; }
+        .moving-line.v:nth-child(17) { left: 92%; animation-duration: 21s; animation-delay: -9s; }
+
+        .moving-line.diag:nth-child(18) { top: 20%; animation-duration: 20s; animation-delay: -4s; }
+        .moving-line.diag:nth-child(19) { top: 50%; animation-duration: 24s; animation-delay: -10s; }
+        .moving-line.diag:nth-child(20) { top: 75%; animation-duration: 18s; animation-delay: -2s; }
+
+        .particle {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: #ff3333;
+            box-shadow: 0 0 15px #ff0000, 0 0 35px rgba(255, 0, 0, 0.15);
+            opacity: 0;
+            animation: particleFloat linear infinite;
+        }
+
+        @keyframes particleFloat {
+            0% { transform: translate(0, 0) scale(0.3); opacity: 0; }
+            10% { opacity: 0.7; }
+            90% { opacity: 0.7; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(1.3); opacity: 0; }
+        }
+
+        #bg-music {
+            display: none;
+        }
+
+        /* ===== ACCESS OVERLAY ===== */
+        #access-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(8, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+        #access-overlay.hidden { display: none; }
+
+        #access-overlay .logo {
+            font-size: 52px;
+            font-weight: 900;
+            letter-spacing: 12px;
+            color: #fff;
+            text-shadow: 0 0 60px rgba(255, 0, 0, 0.9), 0 0 120px rgba(255, 0, 0, 0.4);
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+        #access-overlay .logo span { color: #ff0000; }
+
+        #access-overlay .sub {
+            color: #ff3333;
+            font-size: 14px;
+            letter-spacing: 10px;
+            text-transform: uppercase;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 30px rgba(255,0,0,0.5);
+            margin-bottom: 10px;
+        }
+
+        #access-overlay .lock-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+            opacity: 0.9;
+            filter: drop-shadow(0 0 30px rgba(255,0,0,0.6));
+        }
+
+        #access-overlay input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 0, 0, 0.4);
+            border-radius: 12px;
+            padding: 14px 24px;
+            font-size: 22px;
+            color: #fff;
+            text-align: center;
+            width: 240px;
+            outline: none;
+            letter-spacing: 10px;
+            font-family: 'Courier New', monospace;
+            transition: 0.3s;
+        }
+        #access-overlay input:focus {
+            border-color: #ff1a1a;
+            box-shadow: 0 0 60px rgba(255, 0, 0, 0.2);
+        }
+        #access-overlay .btn-access {
+            background: #ff0000;
+            color: #fff;
+            border: none;
+            padding: 14px 56px;
+            border-radius: 40px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 4px;
+            box-shadow: 0 0 50px rgba(255, 0, 0, 0.4);
+        }
+        #access-overlay .btn-access:hover {
+            transform: scale(1.06);
+            box-shadow: 0 0 80px rgba(255, 0, 0, 0.6);
+        }
+        #access-overlay .error-msg {
+            color: #ff6666;
+            font-size: 14px;
+            min-height: 20px;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        #main-content {
+            display: none;
+            position: relative;
+            z-index: 10;
+            background: transparent;
+            padding: 20px 30px;
+            max-width: 750px;
+            width: 100%;
+            margin: 20px auto;
+        }
+        #main-content.visible { display: block; }
+
+        .header-image {
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            opacity: 0.85;
+            box-shadow: 0 0 60px rgba(255, 0, 0, 0.08);
+        }
+
+        .main-logo {
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: 12px;
+            color: #ffffff;
+            text-shadow: 0 0 70px rgba(255, 255, 255, 0.1), 0 0 50px rgba(255, 0, 0, 0.3);
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 2px;
+        }
+        .main-logo span {
+            color: #ff1a1a;
+            text-shadow: 0 0 80px rgba(255, 0, 0, 0.6);
+        }
+
+        .main-sub {
+            text-align: center;
+            color: #ff4444;
+            font-size: 13px;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255, 0, 0, 0.08);
+            padding-bottom: 14px;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 30px rgba(255,0,0,0.15);
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+            text-align: left;
+        }
+        .form-group label {
+            color: #dddddd;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            display: block;
+            margin-bottom: 4px;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 10px 16px;
+            color: #f0f0f0;
+            font-size: 15px;
+            font-family: 'Courier New', monospace;
+            outline: none;
+            transition: 0.25s;
+            backdrop-filter: blur(4px);
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: rgba(255, 50, 50, 0.3);
+            box-shadow: 0 0 40px rgba(255, 0, 0, 0.05);
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .form-group select option {
+            background: #111;
+            color: #eee;
+        }
+        .form-group textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
+
+        .generated-box {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 0, 0, 0.08);
+            border-radius: 16px;
+            padding: 16px 18px;
+            margin: 14px 0 18px;
+            text-align: left;
+            display: none;
+            max-height: 500px;
+            overflow-y: auto;
+            min-height: 50px;
+            backdrop-filter: blur(4px);
+        }
+        .generated-box.visible { display: block; }
+        .generated-box .msg-title {
+            color: #ff5555;
+            font-size: 11px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 20px rgba(255,0,0,0.15);
+        }
+        .generated-box .msg-content {
+            color: #eeeeee;
+            font-size: 14px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+        .generated-box .cursor-blink {
+            display: inline-block;
+            width: 2px;
+            height: 16px;
+            background: #ff3333;
+            animation: blink 0.7s step-end infinite;
+            vertical-align: text-bottom;
+            margin-left: 2px;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s ease;
+            letter-spacing: 1px;
+            flex: 1 1 auto;
+            min-width: 120px;
+            font-family: 'Courier New', monospace;
+        }
+        .btn-generate {
+            background: rgba(255, 26, 26, 0.8);
+            color: #fff;
+            box-shadow: 0 0 50px rgba(255, 0, 0, 0.15);
+            backdrop-filter: blur(4px);
+        }
+        .btn-generate:hover {
+            background: rgba(204, 0, 0, 0.9);
+            transform: scale(1.03);
+            box-shadow: 0 0 70px rgba(255, 0, 0, 0.25);
+        }
+        .btn-generate:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-copy {
+            background: rgba(255, 255, 255, 0.04);
+            color: #ddd;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(4px);
+        }
+        .btn-copy:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .btn-copy:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .btn-whatsapp {
+            background: rgba(37, 211, 102, 0.7);
+            color: #fff;
+            box-shadow: 0 0 50px rgba(37, 211, 102, 0.08);
+            backdrop-filter: blur(4px);
+        }
+        .btn-whatsapp:hover {
+            background: rgba(29, 168, 81, 0.85);
+            transform: scale(1.03);
+        }
+        .btn-whatsapp:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 0, 0, 0.7);
+            border: 1px solid rgba(255, 0, 0, 0.1);
+            padding: 10px 24px;
+            border-radius: 40px;
+            color: #ddd;
+            font-size: 13px;
+            z-index: 1002;
+            opacity: 0;
+            transition: 0.4s;
+            pointer-events: none;
+            font-family: 'Courier New', monospace;
+            backdrop-filter: blur(10px);
+        }
+        .toast.show { opacity: 1; }
+
+        .status-text {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            text-align: center;
+            margin-top: 6px;
+            font-family: 'Courier New', monospace;
+            min-height: 18px;
+            text-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .footer-link {
+            text-align: center;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 0, 0, 0.05);
+            font-family: 'Courier New', monospace;
+        }
+        .footer-link a {
+            color: rgba(255, 85, 85, 0.6);
+            text-decoration: none;
+            font-size: 13px;
+            letter-spacing: 3px;
+            transition: 0.3s;
+            text-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+        .footer-link a:hover {
+            color: rgba(255, 0, 0, 0.9);
+            text-shadow: 0 0 60px rgba(255, 0, 0, 0.2);
+        }
+
+        .whatsapp-note {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 10px;
+            margin-top: 6px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+            text-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        @media (max-width: 600px) {
+            #main-content { padding: 15px; margin: 5px; }
+            .main-logo { font-size: 32px; letter-spacing: 6px; }
+            #access-overlay .logo { font-size: 34px; letter-spacing: 8px; }
+            #access-overlay input { width: 200px; font-size: 18px; }
+            .header-image { max-height: 140px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== ANIMATED BACKGROUND ===== -->
+    <div class="bg-container">
+        <img class="bg-image" id="bg-image" src="" alt="background" onerror="this.style.display='none'">
+        <div class="red-overlay"></div>
+        <div class="orb"></div>
+        <div class="orb"></div>
+        <div class="orb"></div>
+        <div class="orb"></div>
+
+        <div class="moving-line h"></div>
+        <div class="moving-line h"></div>
+        <div class="moving-line h"></div>
+        <div class="moving-line h"></div>
+        <div class="moving-line h"></div>
+        <div class="moving-line h"></div>
+
+        <div class="moving-line v"></div>
+        <div class="moving-line v"></div>
+        <div class="moving-line v"></div>
+        <div class="moving-line v"></div>
+        <div class="moving-line v"></div>
+        <div class="moving-line v"></div>
+        <div class="moving-line v"></div>
+
+        <div class="moving-line diag"></div>
+        <div class="moving-line diag"></div>
+        <div class="moving-line diag"></div>
+
+        <div id="particle-container"></div>
+    </div>
+
+    <!-- ===== MUSIC ===== -->
+    <audio id="bg-music" loop>
+        <source src="song.mp3.m4a" type="audio/mp4">
+        <source src="song.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- ===== ACCESS OVERLAY ===== -->
+    <div id="access-overlay">
+        <div class="lock-icon">⛔</div>
+        <div class="logo">P<span>L</span>UNDERER</div>
+        <div class="sub">Access Restricted</div>
+        <input type="password" id="access-input" placeholder="••••" maxlength="4" autofocus>
+        <button class="btn-access" onclic
